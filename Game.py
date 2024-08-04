@@ -66,17 +66,21 @@ ALL_ABILITIES = [
     Ability('Obstacle Shift', OBSTACLE_SHIFT_ICON, pygame.K_u)
 ]
 
-
 # Define the board drawing function
 def draw_board(screen):
+    """
+    Draws the chess board on the screen with alternating colors.
+    """
     colors = [WHITE, GRAY]
     for row in range(8):
         for col in range(8):
             color = colors[(row + col) % 2]
             pygame.draw.rect(screen, color, (col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
-
 def spawn_or_respawn_obstacles(player, pieces, train):
+    """
+    Spawns or respawns obstacles on the board avoiding player, pieces, and train positions.
+    """
     global obstacles
     new_obstacles = []
     available_positions = [(x, y) for x in range(8) for y in range(8)]
@@ -97,9 +101,10 @@ def spawn_or_respawn_obstacles(player, pieces, train):
 
     obstacles = new_obstacles
 
-
 def draw_abilities_window(screen):
-    """ Draw the abilities window with buttons and icons. """
+    """
+    Draws the abilities window with buttons and icons.
+    """
     ability_window_rect = pygame.Rect(0, height - BUTTON_HEIGHT - BUTTON_MARGIN, width, BUTTON_HEIGHT + BUTTON_MARGIN)
     pygame.draw.rect(screen, BLACK, ability_window_rect)
 
@@ -124,8 +129,10 @@ def draw_abilities_window(screen):
 
     return button_rects
 
-
 def display_message(screen, message, color, position):
+    """
+    Displays a message on the screen.
+    """
     screen.fill(BLACK)  # Fill screen with black before displaying message
     font = pygame.font.Font(None, 74)
     text = font.render(message, True, color)
@@ -133,8 +140,10 @@ def display_message(screen, message, color, position):
     screen.blit(text, rect)
     pygame.display.update()
 
-
 def reset_game(difficulty):
+    """
+    Resets the game with the given difficulty level.
+    """
     global player, pieces, player_turn, game_over, available_abilities, train, obstacles, ability_used
 
     player = Player((random.randint(0, 7), 0))  # Randomly spawn player on top edge
@@ -170,7 +179,6 @@ def reset_game(difficulty):
     # Initialize ability usage tracking
     ability_used = {ability.name: False for ability in available_abilities}
 
-
 # Player class
 class Player:
     def __init__(self, position):
@@ -180,11 +188,17 @@ class Player:
         self.icon = PLAYER_ICON
 
     def draw(self, screen):
+        """
+        Draws the player on the screen.
+        """
         pygame.draw.rect(screen, self.color,
                          (self.position[0] * BLOCK_SIZE, self.position[1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
         screen.blit(self.icon, (self.position[0] * BLOCK_SIZE, self.position[1] * BLOCK_SIZE))
 
     def move(self, direction, pieces, obstacles, train, board_size=8):
+        """
+        Moves the player in the given direction.
+        """
         if self.double_move_active:
             moved = self._move_once(direction, pieces, obstacles, train, board_size)
             if moved:
@@ -195,6 +209,9 @@ class Player:
         return moved
 
     def _move_once(self, direction, pieces, obstacles, train, board_size):
+        """
+        Moves the player one step in the given direction.
+        """
         x, y = self.position
         move_offsets = {
             'UP': (0, -1), 'DOWN': (0, 1), 'LEFT': (-1, 0), 'RIGHT': (1, 0),
@@ -213,6 +230,9 @@ class Player:
         return False
 
     def is_blocked_by_train(self, start, end, train):
+        """
+        Checks if the player is blocked by the train.
+        """
         x1, y1 = start
         x2, y2 = end
         tx, ty = train.position
@@ -223,7 +243,6 @@ class Player:
             return min_x <= tx <= max_x or min_x <= tx + 1 <= max_x
 
         return False  # Not blocked
-
 
 # ChessPiece class
 class ChessPiece:
@@ -236,11 +255,17 @@ class ChessPiece:
         self.icon = RAM_ICON if type == 'diagonal' else WARLORD_HELMET_ICON
 
     def draw(self, screen):
+        """
+        Draws the chess piece on the screen.
+        """
         pygame.draw.rect(screen, self.color,
                          (self.position[0] * BLOCK_SIZE, self.position[1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
         screen.blit(self.icon, (self.position[0] * BLOCK_SIZE, self.position[1] * BLOCK_SIZE))
 
     def possible_moves(self, board_size=8):
+        """
+        Returns a list of possible moves for the chess piece.
+        """
         x, y = self.position
         moves = []
         if self.type == 'directional':
@@ -257,6 +282,9 @@ class ChessPiece:
         return moves
 
     def calculate_move(self, player_position, pieces, obstacles, train, depth=5):
+        """
+        Calculates the best move for the chess piece using minimax algorithm with alpha-beta pruning.
+        """
         if self.frozen:
             return self.position
 
@@ -271,6 +299,9 @@ class ChessPiece:
             return self.position
 
     def minimax_alpha_beta(self, depth, alpha, beta, maximizing_player, player_position, pieces, obstacles, train):
+        """
+        Implements the minimax algorithm with alpha-beta pruning.
+        """
         if depth == 0 or self.is_terminal_state(player_position):
             return self.evaluate_position(player_position, obstacles, train)
 
@@ -308,14 +339,23 @@ class ChessPiece:
             return min_eval
 
     def is_valid_move(self, move, pieces, obstacles, train):
+        """
+        Checks if the move is valid.
+        """
         return not any(piece.position == move for piece in pieces if piece != self) and \
             not any(obstacle.position == move for obstacle in obstacles) and \
             (not train or not train.is_occupied(move))
 
     def is_terminal_state(self, player_position):
+        """
+        Checks if the current state is a terminal state.
+        """
         return self.position == player_position
 
     def evaluate_position(self, player_position, obstacles, train):
+        """
+        Evaluates the position based on distance to player, obstacles, and train.
+        """
         distance = self.manhattan_distance(self.position, player_position)
         obstacle_penalty = sum(
             5 for obstacle in obstacles if self.manhattan_distance(self.position, obstacle.position) < 2)
@@ -327,6 +367,9 @@ class ChessPiece:
         return a_star_score - obstacle_penalty - train_penalty
 
     def heuristic(self, move, player_position, obstacles, train):
+        """
+        Calculates the heuristic value of a move.
+        """
         distance = self.manhattan_distance(move, player_position)
         obstacle_penalty = sum(5 for obstacle in obstacles if self.manhattan_distance(move, obstacle.position) < 2)
         train_penalty = 10 if train and self.manhattan_distance(move, train.position) < 2 else 0
@@ -341,14 +384,23 @@ class ChessPiece:
 
     @staticmethod
     def manhattan_distance(pos1, pos2):
+        """
+        Calculates the Manhattan distance between two positions.
+        """
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
     def direction_score(self, move, player_position):
+        """
+        Calculates the direction score for a move.
+        """
         current_distance = self.manhattan_distance(self.position, player_position)
         new_distance = self.manhattan_distance(move, player_position)
         return 10 if new_distance < current_distance else -5
 
     def update_frozen_status(self):
+        """
+        Updates the frozen status of the chess piece.
+        """
         if self.frozen:
             self.frozen_turns += 1
             if self.frozen_turns >= 2:
@@ -356,6 +408,9 @@ class ChessPiece:
                 self.frozen_turns = 0
 
     def push_away(self, player_position, pieces, obstacles, board_size=8):
+        """
+        Pushes the chess piece away from the player.
+        """
         direction = (
             self.position[0] - player_position[0],
             self.position[1] - player_position[1]
@@ -372,16 +427,17 @@ class ChessPiece:
                     not any(obstacle.position == (new_x, new_y) for obstacle in obstacles):
                 self.position = (new_x, new_y)
 
-
 class Obstacle:
     def __init__(self, position):
         self.position = position
         self.color = BLACK
 
     def draw(self, screen):
+        """
+        Draws the obstacle on the screen.
+        """
         pygame.draw.rect(screen, self.color,
                          (self.position[0] * BLOCK_SIZE, self.position[1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
-
 
 class Train:
     def __init__(self):
@@ -393,6 +449,9 @@ class Train:
         self.back_icon = pygame.transform.rotate(TRAIN_ICON, 180)  # Rotate the icon for the back of the train
 
     def draw(self, screen):
+        """
+        Draws the train on the screen.
+        """
         x, y = self.position
         pygame.draw.rect(screen, self.color, (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE))
 
@@ -404,6 +463,9 @@ class Train:
             screen.blit(self.front_icon, ((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE))
 
     def move(self, pieces, board_size=8):
+        """
+        Moves the train and pushes any pieces in its way.
+        """
         if self.moving:
             x, y = self.position
             new_x = x + self.direction
@@ -426,20 +488,24 @@ class Train:
             self.position = (new_x, y)
             self.moving = False  # Train moves once per turn
 
-    def draw(self, screen):
-        x, y = self.position
-        pygame.draw.rect(screen, self.color, (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE))
-
     def is_occupied(self, position):
+        """
+        Checks if the given position is occupied by the train.
+        """
         x, y = position
         tx, ty = self.position
         return tx <= x < tx + 2 and ty == y
 
     def start_turn(self):
+        """
+        Allows the train to move on the next turn.
+        """
         self.moving = True  # Allow the train to move next turn
 
-
 def display_difficulty_menu(screen):
+    """
+    Displays the difficulty selection menu and returns the selected difficulty.
+    """
     screen.fill(BLACK)
     font = pygame.font.Font(None, 74)
 
@@ -470,7 +536,6 @@ def display_difficulty_menu(screen):
                     return "medium"
                 elif hard_rect.collidepoint(mouse_pos):
                     return "hard"
-
 
 # Initialize game entities
 difficulty = display_difficulty_menu(screen)
@@ -587,4 +652,3 @@ while running:
         train.draw(screen)
 
     pygame.display.flip()
-
